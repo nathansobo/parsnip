@@ -1,0 +1,33 @@
+%%name = Parsnip::FormatParser
+
+%% {
+  include Parsnip::Ast
+  attr_reader :grammar
+}
+
+eol = "\n"
+space = " " | "\t" | eol
+- = space*
+
+root = - "grammar" - rules:rules - "end" - { @grammar = Ast::Grammar.new(Array(rules)) }
+
+rules = rule*
+
+rule = name:name - "=" - expression:expression { Rule.new(name, expression) }
+
+name = < /\w+/ > { text }
+
+expression = sequence
+
+sequence = value:first (- value)*:rest { Sequence.new([first, *rest]) }
+
+value = string
+
+string = single_quoted_string | double_quoted_string
+
+single_quoted_string = "'" < /[^']*/ > "'" { StringLiteral.new(text) }
+
+double_quoted_string = '"' < /[^"]*/ > '"' { StringLiteral.new(text) }
+
+
+
