@@ -21,8 +21,6 @@ module Parsnip
       }
       id = db[:memo_entries].insert(attributes)
       values[id] = value
-
-      MemoEntry.new(attributes.merge(:id => id, :value => value))
     end
 
     def retrieve(rule_name, begins_at)
