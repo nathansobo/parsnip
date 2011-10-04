@@ -1,6 +1,9 @@
 module Parsnip
   class Parser
-    attr_reader :pos, :grammar
+    extend Forwardable
+    def_delegator :memo_table, :retrieve
+
+    attr_reader :grammar, :buffer, :memo_table, :position
 
     def initialize(grammar)
       @grammar = grammar
@@ -8,17 +11,21 @@ module Parsnip
 
     def parse(buffer)
       @buffer = buffer
-      @pos = 0
+      @memo_table = MemoTable.new
+      @position = 0
       apply(:root)
     end
 
     def apply(rule_name)
-      @grammar.apply(rule_name, self)
+      start_position = position
+      value = grammar.apply(rule_name, self)
+      memo_table.store(rule_name, start_position, position, value)
+      value
     end
 
     def match_string(string)
       len = string.size
-      if @buffer[pos, len] == string
+      if buffer[position, len] == string
         advance(len)
         true
       else
@@ -27,11 +34,11 @@ module Parsnip
     end
 
     def advance(distance)
-      @pos += distance
+      @position += distance
     end
 
-    def rewind(pos)
-      @pos = pos
+    def rewind(position)
+      @position = position
     end
   end
 end

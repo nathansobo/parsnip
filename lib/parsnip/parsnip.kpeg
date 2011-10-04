@@ -11,23 +11,23 @@ space = " " | "\t" | eol
 
 root = - "grammar" - rules:rules - "end" - { @grammar = Ast::Grammar.new(Array(rules)) }
 
-rules = rule*
+rules = rule:first (- rule)*:rest { [first, *rest] }
 
 rule = name:name - "=" - expression:expression { Rule.new(name, expression) }
 
-name = < /\w+/ > { text }
+name = !"end" < /\w+/ > { text.to_sym }
 
 expression = sequence
 
 sequence = value:first (- value)*:rest { Sequence.new([first, *rest]) }
 
-value = string
+value = rule_reference | string
+
+rule_reference = name:name !(- "=") { RuleReference.new(name) }
 
 string = single_quoted_string | double_quoted_string
 
 single_quoted_string = "'" < /[^']*/ > "'" { StringLiteral.new(text) }
 
 double_quoted_string = '"' < /[^"]*/ > '"' { StringLiteral.new(text) }
-
-
 

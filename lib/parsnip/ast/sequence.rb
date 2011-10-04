@@ -6,10 +6,10 @@ module Parsnip
       end
 
       def apply(parser)
-        start = parser.pos
+        start_position = parser.position
         @expressions.each do |exp|
           unless exp.apply(parser)
-            parser.rewind(start)
+            parser.rewind(start_position)
             return false
           end
         end

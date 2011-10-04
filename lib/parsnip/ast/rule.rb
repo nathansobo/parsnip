@@ -4,7 +4,7 @@ module Parsnip
       attr_reader :name
 
       def initialize(name, expression)
-        @name, @expression = name.to_sym, expression
+        @name, @expression = name, expression
       end
 
       def apply(parser)

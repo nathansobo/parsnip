@@ -100,13 +100,52 @@ class Parsnip::FormatParser < KPeg::CompiledParser
     return _tmp
   end
 
-  # rules = rule*
+  # rules = rule:first (- rule)*:rest { [first, *rest] }
   def _rules
-    while true
+
+    _save = self.pos
+    while true # sequence
       _tmp = apply(:_rule)
-      break unless _tmp
-    end
-    _tmp = true
+      first = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _ary = []
+      while true
+
+        _save2 = self.pos
+        while true # sequence
+          _tmp = apply(:__hyphen_)
+          unless _tmp
+            self.pos = _save2
+            break
+          end
+          _tmp = apply(:_rule)
+          unless _tmp
+            self.pos = _save2
+          end
+          break
+        end # end sequence
+
+        _ary << @result if _tmp
+        break unless _tmp
+      end
+      _tmp = true
+      @result = _ary
+      rest = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin;  [first, *rest] ; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
     set_failed_rule :_rules unless _tmp
     return _tmp
   end
@@ -155,11 +194,19 @@ class Parsnip::FormatParser < KPeg::CompiledParser
     return _tmp
   end
 
-  # name = < /\w+/ > { text }
+  # name = !"end" < /\w+/ > { text.to_sym }
   def _name
 
     _save = self.pos
     while true # sequence
+      _save1 = self.pos
+      _tmp = match_string("end")
+      _tmp = _tmp ? nil : true
+      self.pos = _save1
+      unless _tmp
+        self.pos = _save
+        break
+      end
       _text_start = self.pos
       _tmp = scan(/\A(?-mix:\w+)/)
       if _tmp
@@ -169,7 +216,7 @@ class Parsnip::FormatParser < KPeg::CompiledParser
         self.pos = _save
         break
       end
-      @result = begin;  text ; end
+      @result = begin;  text.to_sym ; end
       _tmp = true
       unless _tmp
         self.pos = _save
@@ -238,10 +285,66 @@ class Parsnip::FormatParser < KPeg::CompiledParser
     return _tmp
   end
 
-  # value = string
+  # value = (rule_reference | string)
   def _value
-    _tmp = apply(:_string)
+
+    _save = self.pos
+    while true # choice
+      _tmp = apply(:_rule_reference)
+      break if _tmp
+      self.pos = _save
+      _tmp = apply(:_string)
+      break if _tmp
+      self.pos = _save
+      break
+    end # end choice
+
     set_failed_rule :_value unless _tmp
+    return _tmp
+  end
+
+  # rule_reference = name:name !(- "=") { RuleReference.new(name) }
+  def _rule_reference
+
+    _save = self.pos
+    while true # sequence
+      _tmp = apply(:_name)
+      name = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      _save1 = self.pos
+
+      _save2 = self.pos
+      while true # sequence
+        _tmp = apply(:__hyphen_)
+        unless _tmp
+          self.pos = _save2
+          break
+        end
+        _tmp = match_string("=")
+        unless _tmp
+          self.pos = _save2
+        end
+        break
+      end # end sequence
+
+      _tmp = _tmp ? nil : true
+      self.pos = _save1
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin;  RuleReference.new(name) ; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_rule_reference unless _tmp
     return _tmp
   end
 
@@ -340,12 +443,13 @@ class Parsnip::FormatParser < KPeg::CompiledParser
   Rules[:_space] = rule_info("space", "(\" \" | \"\\t\" | eol)")
   Rules[:__hyphen_] = rule_info("-", "space*")
   Rules[:_root] = rule_info("root", "- \"grammar\" - rules:rules - \"end\" - { @grammar = Ast::Grammar.new(Array(rules)) }")
-  Rules[:_rules] = rule_info("rules", "rule*")
+  Rules[:_rules] = rule_info("rules", "rule:first (- rule)*:rest { [first, *rest] }")
   Rules[:_rule] = rule_info("rule", "name:name - \"=\" - expression:expression { Rule.new(name, expression) }")
-  Rules[:_name] = rule_info("name", "< /\\w+/ > { text }")
+  Rules[:_name] = rule_info("name", "!\"end\" < /\\w+/ > { text.to_sym }")
   Rules[:_expression] = rule_info("expression", "sequence")
   Rules[:_sequence] = rule_info("sequence", "value:first (- value)*:rest { Sequence.new([first, *rest]) }")
-  Rules[:_value] = rule_info("value", "string")
+  Rules[:_value] = rule_info("value", "(rule_reference | string)")
+  Rules[:_rule_reference] = rule_info("rule_reference", "name:name !(- \"=\") { RuleReference.new(name) }")
   Rules[:_string] = rule_info("string", "(single_quoted_string | double_quoted_string)")
   Rules[:_single_quoted_string] = rule_info("single_quoted_string", "\"'\" < /[^']*/ > \"'\" { StringLiteral.new(text) }")
   Rules[:_double_quoted_string] = rule_info("double_quoted_string", "\"\\\"\" < /[^\"]*/ > \"\\\"\" { StringLiteral.new(text) }")
