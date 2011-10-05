@@ -25,10 +25,15 @@ module Parsnip
     end
 
     def apply(rule_name)
-      start_position = position
-      value = grammar.apply(rule_name, self)
-      memo_table.store(rule_name, start_position, max_position, value)
-      value
+      if memo_entry = memo_table.retrieve(rule_name, position)
+        advance(memo_entry.length)
+        memo_entry.value
+      else
+        start_position = position
+        value = grammar.apply(rule_name, self)
+        memo_table.store(rule_name, start_position, max_position, value)
+        value
+      end
     end
 
     def match_string(string)

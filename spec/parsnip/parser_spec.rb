@@ -78,9 +78,11 @@ describe "Parser" do
       parser.retrieve(:root, 0).should be_nil
       parser.retrieve(:b, 6).should be_nil
 
+      puts "---------------------------------"
       parser.parse.should be_false
       new_b = parser.retrieve(:b, 6)
       new_b.value.should be_false
+      new_b.range.should == (6..10)
     end
   end
 end

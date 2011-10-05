@@ -23,5 +23,9 @@ module Parsnip
     def range
       begins_at..ends_at
     end
+
+    def length
+      ends_at - begins_at + 1
+    end
   end
 end
