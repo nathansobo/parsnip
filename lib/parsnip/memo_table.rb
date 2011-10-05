@@ -19,15 +19,36 @@ module Parsnip
         :begins_at => begins_at,
         :ends_at => ends_at
       }
-      id = db[:memo_entries].insert(attributes)
+      id = records.insert(attributes)
       values[id] = value
     end
 
     def retrieve(rule_name, begins_at)
-      attributes = db[:memo_entries].filter(:rule_name => rule_name.to_s, :begins_at => begins_at).first
+      attributes = records[:rule_name => rule_name.to_s, :begins_at => begins_at]
       return unless attributes
 
       MemoEntry.new(attributes.merge(:value => values[attributes[:id]]))
+    end
+
+    def expire(range, new_string_length)
+      conditions = "(begins_at <= #{range.min} and ends_at >= #{range.min}) or (begins_at <= #{range.max} and ends_at >= #{range.max})"
+      records.filter(conditions).select(:id).each do |record|
+        id = record[:id]
+        records.filter(:id => id).delete
+        values.delete(id)
+      end
+    end
+
+    def empty?
+      records.count == 0
+    end
+
+    def size
+      records.count
+    end
+
+    def records
+      db[:memo_entries]
     end
   end
 end
