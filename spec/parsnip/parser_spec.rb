@@ -85,28 +85,7 @@ describe "Parser" do
     end
   end
 
-
-
-  describe "with 2 choices" do
-    let(:grammar) {%{
-      grammar
-        root = a | b
-        a = "alpha"
-        b = "bravo"
-      end
-    }}
-
-    it "accepts matching input" do
-      parser.parse('alpha').should == true
-      parser.parse('bravo').should == true
-    end
-
-    it "rejects non-matching input" do
-      parser.parse('charlie').should == false
-    end
-  end
-
-  describe "with 3 choices" do
+  describe "with choices" do
     let(:grammar) {%{
       grammar
         root = a | b | "zulu"
