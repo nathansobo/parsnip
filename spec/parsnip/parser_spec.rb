@@ -89,7 +89,7 @@ describe "Parser" do
   describe "with choices" do
     let(:grammar) {%{
       grammar
-        root = a | b
+        root = a | b | "zulu"
         a = "alpha"
         b = "bravo"
       end

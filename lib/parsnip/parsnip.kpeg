@@ -19,7 +19,7 @@ name = !"end" < /\w+/ > { text.to_sym }
 
 expression = choice | sequence
 
-choice = sequence:first (- "|" - sequence):rest { Choice.new([first, rest]) }
+choice = sequence:first (- "|" - sequence)+:rest { Choice.new([first, *rest]) }
 
 sequence = value:first (- value)*:rest { Sequence.new([first, *rest]) }
 
