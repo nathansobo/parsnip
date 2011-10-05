@@ -104,5 +104,30 @@ describe "Parser" do
       parser.parse('charlie').should == false
     end
   end
+
+  describe "with choices that force a backtrack" do
+    let(:grammar) {%{
+      grammar
+        root = a | b
+        a = "a" "b" "c"
+        b = "a" "b"
+      end
+    }}
+
+    it "records a memo entry with ends_at including the position where the backtrack was triggered" do
+      parser.parse("ab").should be_true
+      root = parser.retrieve(:root, 0)
+      root.value.should == true
+      root.range.should == (0..2)
+
+      a = parser.retrieve(:a, 0)
+      a.value.should == false
+      a.range.should == (0..2)
+
+      b = parser.retrieve(:b, 0)
+      b.value.should == true
+      b.range.should == (0..1)
+    end
+  end
 end
 
