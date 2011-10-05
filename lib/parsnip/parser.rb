@@ -27,12 +27,13 @@ module Parsnip
     def apply(rule_name)
       if memo_entry = memo_table.retrieve(rule_name, position)
         advance_position(memo_entry.length)
+        update_max_position(memo_entry.max_position)
         memo_entry.value
       else
-        start_position = position
+        min_position = position
         push_max_position
         value = grammar.apply(rule_name, self)
-        memo_table.store(rule_name, start_position, max_position, value)
+        memo_table.store(rule_name, min_position, max_position, value)
         pop_max_position
         value
       end
@@ -40,7 +41,7 @@ module Parsnip
 
     def match_string(string)
       len = string.size
-      advance_max_position(len - 1)
+      update_max_position(position + len - 1)
       if buffer[position, len] == string
         advance_position(len)
         true
@@ -53,8 +54,7 @@ module Parsnip
       @position += distance
     end
 
-    def advance_max_position(distance)
-      new_max = position + distance
+    def update_max_position(new_max)
       max_position_stack[-1] = new_max if new_max > max_position
     end
 
@@ -67,8 +67,7 @@ module Parsnip
     end
 
     def pop_max_position
-      previous_max = max_position_stack.pop
-      max_position_stack[-1] = previous_max if previous_max > max_position
+      update_max_position(max_position_stack.pop)
     end
 
     def rewind(position)

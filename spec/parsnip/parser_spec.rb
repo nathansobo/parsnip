@@ -3,7 +3,7 @@ require 'spec_helper'
 describe "Parser" do
   let(:parser) { Parsnip.from_string(grammar).parser }
 
-  describe "with sequence expressions" do
+  describe "sequence expressions" do
     let(:grammar) {%{
       grammar
         root = "a" "b" "c"
@@ -33,7 +33,7 @@ describe "Parser" do
     end
   end
 
-  describe "with rule references" do
+  describe "rule references" do
     let(:grammar) {%{
       grammar
         root = a " " b
@@ -85,7 +85,7 @@ describe "Parser" do
     end
   end
 
-  describe "with choices" do
+  describe "simple choices" do
     let(:grammar) {%{
       grammar
         root = a | b | "zulu"
@@ -105,7 +105,7 @@ describe "Parser" do
     end
   end
 
-  describe "with choices that force a backtrack" do
+  describe "assignment of memo entry ranges in the presence of backtracking" do
     let(:grammar) {%{
       grammar
         root = a | b
@@ -127,6 +127,39 @@ describe "Parser" do
       b = parser.retrieve(:b, 0)
       b.value.should == true
       b.range.should == (0..1)
+    end
+  end
+
+  describe "assignment of ranges on new memo entries when recycling memo entries from a previous parse" do
+    let(:grammar) {%{
+      grammar
+        root = a b
+        a = "j" | "k"
+        b = c | d
+        c = "l" "m" "n"
+        d = "l" "m"
+      end
+    }}
+
+    it "updates the max_position when pulling results from the memo table" do
+      parser.parse("jlm").should == true
+      parser.retrieve(:root, 0).range.should == (0..3)
+      parser.retrieve(:b, 1).range.should == (1..3)
+      c = parser.retrieve(:c, 1)
+      c.value.should == false
+      c.range.should == (1..3)
+
+      parser.update(0..0, 'k') # --> klm
+
+      parser.retrieve(:root, 0).should be_nil
+      b = parser.retrieve(:b, 1)
+      b.value.should == true
+      b.range.should == (1..3)
+
+      parser.parse.should == true
+
+      # max position should be updated when using memoized value of rule b at position 1
+      parser.retrieve(:root, 0).range.should == (0..3) 
     end
   end
 end

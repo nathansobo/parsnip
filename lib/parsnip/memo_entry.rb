@@ -8,12 +8,12 @@ module Parsnip
       @attributes[:rule_name]
     end
 
-    def begins_at
-      @attributes[:begins_at]
+    def min_position
+      @attributes[:min_position]
     end
 
-    def ends_at
-      @attributes[:ends_at]
+    def max_position
+      @attributes[:max_position]
     end
 
     def value
@@ -21,11 +21,11 @@ module Parsnip
     end
 
     def range
-      begins_at..ends_at
+      min_position..max_position
     end
 
     def length
-      ends_at - begins_at + 1
+      max_position - min_position + 1
     end
   end
 end
