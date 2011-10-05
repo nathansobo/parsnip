@@ -228,10 +228,74 @@ class Parsnip::FormatParser < KPeg::CompiledParser
     return _tmp
   end
 
-  # expression = sequence
+  # expression = (choice | sequence)
   def _expression
-    _tmp = apply(:_sequence)
+
+    _save = self.pos
+    while true # choice
+      _tmp = apply(:_choice)
+      break if _tmp
+      self.pos = _save
+      _tmp = apply(:_sequence)
+      break if _tmp
+      self.pos = _save
+      break
+    end # end choice
+
     set_failed_rule :_expression unless _tmp
+    return _tmp
+  end
+
+  # choice = sequence:first (- "|" - sequence):rest { Choice.new([first, rest]) }
+  def _choice
+
+    _save = self.pos
+    while true # sequence
+      _tmp = apply(:_sequence)
+      first = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+
+      _save1 = self.pos
+      while true # sequence
+        _tmp = apply(:__hyphen_)
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        _tmp = match_string("|")
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        _tmp = apply(:__hyphen_)
+        unless _tmp
+          self.pos = _save1
+          break
+        end
+        _tmp = apply(:_sequence)
+        unless _tmp
+          self.pos = _save1
+        end
+        break
+      end # end sequence
+
+      rest = @result
+      unless _tmp
+        self.pos = _save
+        break
+      end
+      @result = begin;  Choice.new([first, rest]) ; end
+      _tmp = true
+      unless _tmp
+        self.pos = _save
+      end
+      break
+    end # end sequence
+
+    set_failed_rule :_choice unless _tmp
     return _tmp
   end
 
@@ -446,7 +510,8 @@ class Parsnip::FormatParser < KPeg::CompiledParser
   Rules[:_rules] = rule_info("rules", "rule:first (- rule)*:rest { [first, *rest] }")
   Rules[:_rule] = rule_info("rule", "name:name - \"=\" - expression:expression { Rule.new(name, expression) }")
   Rules[:_name] = rule_info("name", "!\"end\" < /\\w+/ > { text.to_sym }")
-  Rules[:_expression] = rule_info("expression", "sequence")
+  Rules[:_expression] = rule_info("expression", "(choice | sequence)")
+  Rules[:_choice] = rule_info("choice", "sequence:first (- \"|\" - sequence):rest { Choice.new([first, rest]) }")
   Rules[:_sequence] = rule_info("sequence", "value:first (- value)*:rest { Sequence.new([first, *rest]) }")
   Rules[:_value] = rule_info("value", "(rule_reference | string)")
   Rules[:_rule_reference] = rule_info("rule_reference", "name:name !(- \"=\") { RuleReference.new(name) }")

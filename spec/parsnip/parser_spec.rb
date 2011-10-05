@@ -3,7 +3,7 @@ require 'spec_helper'
 describe "Parser" do
   let(:parser) { Parsnip.from_string(grammar).parser }
 
-  describe "for sequence expressions" do
+  describe "with sequence expressions" do
     let(:grammar) {%{
       grammar
         root = "a" "b" "c"
@@ -33,7 +33,7 @@ describe "Parser" do
     end
   end
 
-  describe "rule references" do
+  describe "with rule references" do
     let(:grammar) {%{
       grammar
         root = a " " b
@@ -78,11 +78,30 @@ describe "Parser" do
       parser.retrieve(:root, 0).should be_nil
       parser.retrieve(:b, 6).should be_nil
 
-      puts "---------------------------------"
       parser.parse.should be_false
       new_b = parser.retrieve(:b, 6)
       new_b.value.should be_false
       new_b.range.should == (6..10)
+    end
+  end
+
+
+  describe "with choices" do
+    let(:grammar) {%{
+      grammar
+        root = a | b
+        a = "alpha"
+        b = "bravo"
+      end
+    }}
+
+    it "accepts matching input" do
+      parser.parse('alpha').should == true
+      parser.parse('bravo').should == true
+    end
+
+    it "rejects non-matching input" do
+      parser.parse('charlie').should == false
     end
   end
 end
