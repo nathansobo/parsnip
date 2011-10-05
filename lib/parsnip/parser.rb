@@ -33,6 +33,7 @@ module Parsnip
 
     def match_string(string)
       len = string.size
+      @max_position = position + len - 1
       if buffer[position, len] == string
         advance(len)
         true
@@ -43,18 +44,10 @@ module Parsnip
 
     def advance(distance)
       @position += distance
-      set_max_position
     end
 
     def rewind(position)
-      set_max_position
       @position = position
-    end
-
-    def set_max_position
-      if position > max_position
-        @max_position = position
-      end
     end
   end
 end
