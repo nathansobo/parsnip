@@ -162,5 +162,26 @@ describe "Parser" do
       parser.retrieve(:root, 0).range.should == (0..3) 
     end
   end
+
+  describe "updating of the position from a memoized entry when the length of the match differs from the length volatile range" do
+    let(:grammar) {%{
+      grammar
+        root = a b
+        a = "l" "m" "n" | "l" "m"
+        b = "o" "p" | "o" "q"
+      end
+    }}
+
+
+    it "uses the true length of the match instead of the max_position of the volatile range" do
+      parser.parse("lmop").should == true
+      a = parser.retrieve(:a, 0)
+      a.range.should == (0..2)
+      a.length.should == 2
+
+      parser.update(3..3, "q") # --> lmoq
+      parser.parse.should == true
+    end
+  end
 end
 

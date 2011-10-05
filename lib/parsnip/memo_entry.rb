@@ -16,16 +16,16 @@ module Parsnip
       @attributes[:max_position]
     end
 
+    def length
+      @attributes[:length]
+    end
+
     def value
       @attributes[:value]
     end
 
     def range
       min_position..max_position
-    end
-
-    def length
-      max_position - min_position + 1
     end
   end
 end

@@ -9,25 +9,22 @@ module Parsnip
         String :rule_name
         Integer :min_position
         Integer :max_position
+        Integer :length
       end
       @values = {}
     end
 
-    def store(rule_name, min_position, max_position, value)
-      attributes = {
-        :rule_name => rule_name.to_s,
-        :min_position => min_position,
-        :max_position => max_position
-      }
+    def store(attributes)
+      attributes[:rule_name] = attributes[:rule_name].to_s
+      value = attributes.delete(:value)
       id = records.insert(attributes)
       values[id] = value
     end
 
     def retrieve(rule_name, min_position)
-      attributes = records[:rule_name => rule_name.to_s, :min_position => min_position]
-      return unless attributes
-
-      MemoEntry.new(attributes.merge(:value => values[attributes[:id]]))
+      return unless attributes = records[:rule_name => rule_name.to_s, :min_position => min_position]
+      attributes[:value] = values[attributes[:id]]
+      MemoEntry.new(attributes)
     end
 
     def expire(range, new_string_length)

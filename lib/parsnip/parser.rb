@@ -26,14 +26,20 @@ module Parsnip
 
     def apply(rule_name)
       if memo_entry = memo_table.retrieve(rule_name, position)
-        advance_position(memo_entry.length)
+        advance_position(memo_entry.length) # TODO: Calculating the length from the max position, but this may not be the real length of the node!
         update_max_position(memo_entry.max_position)
         memo_entry.value
       else
         min_position = position
         push_max_position
         value = grammar.apply(rule_name, self)
-        memo_table.store(rule_name, min_position, max_position, value)
+        memo_table.store(
+          :rule_name => rule_name,
+          :min_position => min_position,
+          :max_position => max_position,
+          :length => position - min_position,
+          :value => value
+        )
         pop_max_position
         value
       end
