@@ -172,7 +172,6 @@ describe "Parser" do
       end
     }}
 
-
     it "uses the true length of the match instead of the max_position of the volatile range" do
       parser.parse("lmop").should == true
       a = parser.retrieve(:a, 0)
@@ -181,6 +180,40 @@ describe "Parser" do
 
       parser.update(3..3, "q") # --> lmoq
       parser.parse.should == true
+    end
+  end
+
+  describe "adjusting the positions of memo entries later in the buffer when a length-changing update is performed" do
+    let(:grammar) {%{
+      grammar
+        root = a b
+        a = "alpha" | "a"
+        b = "bravo"
+      end
+    }}
+
+    it "adjusts the min and max positions to match the entry's new location'" do
+      parser.parse("alphabravo").should be_true
+                   #0123456789
+
+      b = parser.retrieve(:b, 5)
+      b.min_position.should == 5
+      b.max_position.should == 9
+
+      parser.update(0..4, "a") # --> abravo
+                               #     012345
+
+      b = parser.retrieve(:b, 1)
+      b.min_position.should == 1
+      b.max_position.should == 5
+
+      parser.parse.should == true
+
+      parser.update(0..0, "alpha") # --> alphabravo
+
+      b = parser.retrieve(:b, 5)
+      b.min_position.should == 5
+      b.max_position.should == 9
     end
   end
 end

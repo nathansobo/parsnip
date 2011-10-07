@@ -28,12 +28,19 @@ module Parsnip
     end
 
     def expire(range, new_string_length)
-      conditions = "(min_position <= #{range.min} and max_position >= #{range.min}) or (min_position <= #{range.max} and max_position >= #{range.max})"
-      records.filter(conditions).select(:id).each do |record|
+      min = :min_position.identifier
+      max = :max_position.identifier
+      around_min = (min <= range.min) & (max >= range.min)
+      around_max = (min <= range.max) & (max >= range.max)
+      records.filter(around_min | around_max).select(:id).each do |record|
         id = record[:id]
         records.filter(:id => id).delete
         values.delete(id)
       end
+
+      range_length = range.max - range.min + 1
+      delta = new_string_length - range_length
+      records.filter("min_position > #{range.max}").update(:min_position => :min_position + delta, :max_position => :max_position + delta)
     end
 
     def empty?
