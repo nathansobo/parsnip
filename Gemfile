@@ -5,3 +5,4 @@ gemspec
 gem 'rspec'
 gem 'kpeg', :git => 'https://github.com/evanphx/kpeg.git'
 gem 'fssm'
+gem 'ruby-debug19'

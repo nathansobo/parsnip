@@ -218,20 +218,18 @@ describe "Parser" do
   end
 
   describe "direct left recursion" do
-    pending
-
     let(:grammar) {%{
       grammar
         root = exp
         exp = exp "-" number | number
-        number = "1" | "2" | "3"
+        number = "10" | "20" | "30"
       end
     }}
     
     it "allows directly left recursive rules to match without infinite loops" do
-      parser.parse("2-1").should be_true
+      parser.parse("20-10").should be_true
       exp = parser.retrieve(:exp, 0)
-      exp.range.should == (0..2)
+      exp.range.should == (0..5)
     end
   end
 end

@@ -1,6 +1,7 @@
 module Parsnip
   class Parser
-    attr_reader :grammar, :buffer, :memo_table, :position, :max_position_stack
+    attr_reader :grammar, :buffer, :memo_table, :max_position_stack
+    attr_accessor :position
 
     def initialize(grammar)
       @grammar = grammar
@@ -27,8 +28,9 @@ module Parsnip
         advance_position(memo_entry.length)
         update_max_position(memo_entry.max_position)
         if memo_entry.value.instance_of?(LeftRecursion)
+          # puts "detected left recursion"
           memo_entry.value.detected!
-          false
+          return false
         else
           memo_entry.value
         end
@@ -37,11 +39,14 @@ module Parsnip
         memo_entry = MemoEntry.create(
           :rule_name => rule_name,
           :min_position => position,
-          :value => left_recursion
+          :max_position => position,
+          :value => left_recursion,
+          :length => 0
         )
 
         start_position = position
         push_max_position
+        # puts "push for #{rule_name}: #{max_position_stack}"
 
         value = grammar.apply(rule_name, self)
 
@@ -51,18 +56,27 @@ module Parsnip
           :value => value
         )
 
-        pop_max_position
-
         if left_recursion.detected?
-          grow_left_recursion(rule_name, position, memo_entry, nil)
-        else
-          value
+          value = grow_left_recursion(rule_name, start_position, memo_entry, nil)
         end
+
+        pop_max_position
+        # puts "pop for #{rule_name}: #{max_position_stack}"
+        value
       end
     end
 
-    def grow_left_recursion(*args)
-      false
+    def grow_left_recursion(rule_name, start_position, memo_entry, h)
+      while true
+        self.position = start_position
+        value = grammar.apply(rule_name, self)
+        break if !value || position <= memo_entry.end_position
+        memo_entry.update(:value => value, :end_position => position, :max_position => max_position)
+      end
+      memo_entry.update(:max_position => max_position)
+
+      self.position = memo_entry.end_position
+      memo_entry.value
     end
 
     def match_string(string)
