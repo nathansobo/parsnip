@@ -25,7 +25,7 @@ describe "Parser" do
       memo_entry.range.should == (0..2)
 
       parser.update(2..2, 'z')
-      parser.memo_table.should be_empty
+      MemoEntry.should be_empty
       parser.parse.should be_false
       memo_entry = parser.retrieve(:root, 0)
       memo_entry.value.should == false
@@ -214,6 +214,24 @@ describe "Parser" do
       b = parser.retrieve(:b, 5)
       b.min_position.should == 5
       b.max_position.should == 9
+    end
+  end
+
+  describe "direct left recursion" do
+    pending
+
+    let(:grammar) {%{
+      grammar
+        root = exp
+        exp = exp "-" number | number
+        number = "1" | "2" | "3"
+      end
+    }}
+    
+    it "allows directly left recursive rules to match without infinite loops" do
+      parser.parse("2-1").should be_true
+      exp = parser.retrieve(:exp, 0)
+      exp.range.should == (0..2)
     end
   end
 end

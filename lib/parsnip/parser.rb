@@ -1,8 +1,5 @@
 module Parsnip
   class Parser
-    extend Forwardable
-    def_delegator :memo_table, :retrieve
-
     attr_reader :grammar, :buffer, :memo_table, :position, :max_position_stack
 
     def initialize(grammar)
@@ -10,10 +7,7 @@ module Parsnip
     end
 
     def parse(buffer=nil)
-      if buffer
-        @buffer = buffer
-        @memo_table = MemoTable.new
-      end
+      @buffer = buffer if buffer
       @position = 0
       @max_position_stack = [0]
       apply(:root)
@@ -21,28 +15,54 @@ module Parsnip
 
     def update(range, new_string)
       buffer[range] = new_string
-      memo_table.expire(range, new_string.length)
+      MemoEntry.expire(range, new_string.length)
+    end
+
+    def retrieve(rule_name, position)
+      MemoEntry[:rule_name => rule_name.to_s, :min_position => position]
     end
 
     def apply(rule_name)
-      if memo_entry = memo_table.retrieve(rule_name, position)
-        advance_position(memo_entry.length) # TODO: Calculating the length from the max position, but this may not be the real length of the node!
+      if memo_entry = retrieve(rule_name, position)
+        advance_position(memo_entry.length)
         update_max_position(memo_entry.max_position)
-        memo_entry.value
+        if memo_entry.value.instance_of?(LeftRecursion)
+          memo_entry.value.detected!
+          false
+        else
+          memo_entry.value
+        end
       else
-        min_position = position
-        push_max_position
-        value = grammar.apply(rule_name, self)
-        memo_table.store(
+        left_recursion = LeftRecursion.new
+        memo_entry = MemoEntry.create(
           :rule_name => rule_name,
-          :min_position => min_position,
+          :min_position => position,
+          :value => left_recursion
+        )
+
+        start_position = position
+        push_max_position
+
+        value = grammar.apply(rule_name, self)
+
+        memo_entry.update(
           :max_position => max_position,
-          :length => position - min_position,
+          :length => position - start_position,
           :value => value
         )
+
         pop_max_position
-        value
+
+        if left_recursion.detected?
+          grow_left_recursion(rule_name, position, memo_entry, nil)
+        else
+          value
+        end
       end
+    end
+
+    def grow_left_recursion(*args)
+      false
     end
 
     def match_string(string)
@@ -78,6 +98,20 @@ module Parsnip
 
     def rewind(position)
       @position = position
+    end
+
+    class LeftRecursion
+      def initialize
+        @detected = false
+      end
+
+      def detected!
+        @detected = true
+      end
+
+      def detected?
+        @detected
+      end
     end
   end
 end
